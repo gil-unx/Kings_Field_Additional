@@ -17,6 +17,7 @@
 mono_crash.*
 
 # Build results
+[Mm]ain/
 [Dd]ebugPublic/
 [Rr]eleases/
 x64/
@@ -358,3 +359,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+Kings_Field_Additional/bin/Debug/Kings_Field_Additional_I_JPN_PSP-DMU.iso
+Kings_Field_Additional/bin/Debug/main.dat
+Kings_Field_Additional/bin/Debug/main.dat.new
+Kings_Field_Additional/bin/Debug/main.dec

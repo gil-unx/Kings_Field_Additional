@@ -79,7 +79,6 @@ namespace Kings_Field_Additional
                 int id = hdrReader.ReadInt32();
                 int offset = hdrReader.ReadInt32();
                 hdrReader.ReadBytes(4);
-                Console.WriteLine("{0,0:X8} {1,0:X8} {2,0:X8}", size, id, offset);
                 writer.BaseStream.Seek(offset, SeekOrigin.Begin);
                 reader.BaseStream.Seek(offset, SeekOrigin.Begin);
                 writer.Write(Decrypt(reader.ReadBytes(size), key, ivec));
@@ -96,7 +95,7 @@ namespace Kings_Field_Additional
             byte[] key = new byte[] { 0x8D, 0x5A, 0xB5, 0x6A, 0xE7, 0xCC, 0xDA, 0xE9, 0x4D, 0x01, 0x4C, 0x43, 0xBE, 0x36, 0xEA, 0x65 };
             byte[] ivec = new byte[] { 0x36, 0xC9, 0x2E, 0x63, 0xA8, 0x7C, 0x05, 0x4B, 0x8C, 0x2A, 0xAB, 0x1A, 0xA8, 0x4F, 0x15, 0xEA };
             FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-            FileStream fileStream1 = new FileStream(Path.ChangeExtension(fileName, "dat"), FileMode.Create, FileAccess.Write);
+            FileStream fileStream1 = new FileStream(Path.ChangeExtension(fileName, "dat.new"), FileMode.Create, FileAccess.Write);
             BinaryReader reader = new BinaryReader(fileStream);
             BinaryWriter writer = new BinaryWriter(fileStream1);
             writer.Write(Encrypt(reader.ReadBytes(0x10), key, ivec));
@@ -115,7 +114,6 @@ namespace Kings_Field_Additional
                 int id = hdrReader.ReadInt32();
                 int offset = hdrReader.ReadInt32();
                 hdrReader.ReadBytes(4);
-                Console.WriteLine("{0,0:X8} {1,0:X8} {2,0:X8}", size, id, offset);
                 writer.BaseStream.Seek(offset, SeekOrigin.Begin);
                 reader.BaseStream.Seek(offset, SeekOrigin.Begin);
                 writer.Write(Encrypt(reader.ReadBytes(size), key, ivec));
@@ -150,7 +148,7 @@ namespace Kings_Field_Additional
                     switch (type)
                     {
                         case 0:
-                            extension = "jfif";
+                            extension = "jpg";
                             break;
                         case 1:
                             Console.WriteLine( fileName, "Type1 ");
@@ -215,6 +213,7 @@ namespace Kings_Field_Additional
                     }
                     byte[] buffer = File.ReadAllBytes(string.Format("{0}\\{1,0:d4}.{2}", outF, i, extension));
                     offset = (int)memory1.Position+ptRef;
+                    size = (int)buffer.Length;
                     wr.Write(buffer);
                     wr.WritePadding(0x10, 0);
                     writer.Write(type);
@@ -233,6 +232,7 @@ namespace Kings_Field_Additional
         }
         static void UnpackDat(string fileName, int startIndex = 0, int endIndex = 110)
         {
+            fileName =Path.GetFullPath(fileName);   
             string outFHDR = Path.GetDirectoryName(fileName) + "\\" + Path.GetFileNameWithoutExtension(fileName)+"\\_0000";
 
             string outF = Path.GetDirectoryName(fileName) + "\\" + Path.GetFileNameWithoutExtension(fileName);
@@ -243,6 +243,7 @@ namespace Kings_Field_Additional
                 //SYSTEM/
                 {
                     int count;
+                    Console.WriteLine("Unpack >>{0}\\_0000", outF);
                     //STRING block
                     {
                         List<string> strings = new List<string>();
@@ -348,30 +349,36 @@ namespace Kings_Field_Additional
                     }
 
                 }
-                /*///Indexed Block atart
+                ////Indexed Block start
                 {
                     reader.BaseStream.Seek(0x06B120, SeekOrigin.Begin);
                     for (int i = 0; i < 110; i++)
                     {
 
-                        Console.WriteLine("Unpack >>{0}\\{1,0:d4}.bin", outF,i);
+                      
                         int size = reader.ReadInt32();
                         int id = reader.ReadInt32();
                         int offset = reader.ReadInt32();
                         reader.ReadBytes(4);
-                        byte[] buffer = reader.GetBytes(offset, size);
-                        File.WriteAllBytes(outF + string.Format("\\{0,0:d4}.bin", i), buffer);
-                        BinBlockUnpack(outF + string.Format("\\{0,0:d4}.bin", i), offset);
+                        if ((i >= startIndex) && (i <= endIndex))
+                        {
+                            Console.WriteLine("Unpack >>{0}\\{1,0:d4}.bin", outF, i);
+                            byte[] buffer = reader.GetBytes(offset, size);
+                            File.WriteAllBytes(outF + string.Format("\\{0,0:d4}.bin", i), buffer);
+                            BinBlockUnpack(outF + string.Format("\\{0,0:d4}.bin", i), offset);
+
+                        }
+                            
                     }
 
                 }
-                *////Indexed Block end
+                ////Indexed Block end
                 reader.Close();
             }
         }
         static void RepackDat(string fileName,int startIndex = 0, int endIndex = 110)
         {
-
+            fileName = Path.GetFullPath(fileName);
             string outFHDR = Path.GetDirectoryName(fileName) + "\\" + Path.GetFileNameWithoutExtension(fileName) + "\\_0000";
             string outF = Path.GetDirectoryName(fileName) + "\\" + Path.GetFileNameWithoutExtension(fileName);
             Directory.CreateDirectory(outFHDR);
@@ -397,19 +404,16 @@ namespace Kings_Field_Additional
                     {
                         byte[] str = Encoding.GetEncoding("shift-jis").GetBytes(strings[i]);
                         int offset;
-                        //if(ptSame.TryGetValue(strings[i], out offset))
-                        //{
-                        //}
-                        //else
-                        //{
-                        //    offset = (int)memory.Position + ptRef;
-                        //    ptSame.Add(strings[i], offset);
-                        //    memory.Write(str, 0, str.Length);
-                        //    memory.Seek(1, SeekOrigin.Current);
-                        //}
-                        offset = (int)memory.Position + ptRef;
-                        memory.Write(str, 0, str.Length);
-                        memory.Seek(1, SeekOrigin.Current);
+                        if(ptSame.TryGetValue(strings[i], out offset))
+                        {
+                        }
+                        else
+                        {
+                            offset = (int)memory.Position + ptRef;
+                            ptSame.Add(strings[i], offset);
+                            memory.Write(str, 0, str.Length);
+                            memory.Seek(1, SeekOrigin.Current);
+                        }
                         writer.Write(offset);
 
                     }
@@ -495,6 +499,11 @@ namespace Kings_Field_Additional
                    
                     ImgRepack(outFHDR + "\\IMG.bin");
                     buffer = File.ReadAllBytes(outFHDR + "\\IMG.bin");
+                    if (reader.BaseStream.Position + buffer.Length > 0x1FF000)
+                    {
+                        Console.WriteLine("Maximum size reached!! _0000");
+                        Environment.Exit(1);
+                    }
                     using (MemoryStream memory = new MemoryStream(buffer))
                     {
                         BinaryWriter wr = new BinaryWriter(memory);
@@ -513,6 +522,7 @@ namespace Kings_Field_Additional
                         
                     }
                     writer.Write(buffer);
+                    writer.WritePadding(0x1FF000, 0);
                 }
                 {
                     size_6B800 = (int)writer.BaseStream.Position - 0x6B800;
@@ -995,17 +1005,76 @@ namespace Kings_Field_Additional
 
 
         }
+        static void Usage()
+        {
+            Console.WriteLine("Kings_Field_Additional main.dat unpacker by Gil_Unx");
+            Console.WriteLine("------------------------------------");
+            Console.WriteLine
+                (
+                "ERROR: Argument tidak spesifik\n\n" +
+                "Decrypt main.dat to main.dec: Kings_Field_Additional.exe -d main.dat\n\n" +
+                "Encrypt main.dec to main.dat: Kings_Field_Additional.exe -e main.dec\n\n" +
+                "Unpack main.dec: Kings_Field_Additional.exe -u main.dec\n\n" +
+                "Repack main.dec: Kings_Field_Additional.exe -r main.dec\n\n" +
+                "Repack main.dec spesifik index: Kings_Field_Additional.exe -r [index start] [index end] main.dec\n\n"
+               );
 
+        }
         static void Main(string[] args)
         {
-            string fileName = "C:\\iso\\Kings_Field_Additional_I_JPN_PSP-DMU\\PSP_GAME\\USRDIR\\GameData\\01_UmdTitle\\main.dec";
-            // BinBlockUnpack("C:\\iso\\Kings_Field_Additional_I_JPN_PSP-DMU\\PSP_GAME\\USRDIR\\GameData\\01_UmdTitle\\main\\0000.bin", 0x1FF000);
-            // BinBlockRepack("C:\\iso\\Kings_Field_Additional_I_JPN_PSP-DMU\\PSP_GAME\\USRDIR\\GameData\\01_UmdTitle\\main\\0000.bin", 0x1FF000);
-         // UnpackDat(fileName);
-          RepackDat(fileName,0,2);
-          
-            EncryptDat(fileName);
-            //MessBlockRepack("C:\\iso\\Kings_Field_Additional_I_JPN_PSP-DMU\\Untitled3.block", 0xA6ED0);
+            string mode = "";
+            string input = "";
+            if (args.Length < 2) { Usage(); return; }
+            mode = args[0].ToUpper();
+            input = args[1];
+             ////
+            {
+
+                if (mode == "-D")
+                {
+                    DecryptDat(input);
+                    Console.WriteLine("Decrypt {0} done...", Path.GetFileName(input));
+                }
+                if (mode == "-E")
+                {
+                    EncryptDat(input);
+                    Console.WriteLine("Encrypt {0} done...", Path.GetFileName(input));
+                }
+                if (mode == "-U")
+                {
+                    if (args.Length == 4)
+                    {
+                        int start = int.Parse(args[2]);
+                        int end = int.Parse(args[3]);
+                        UnpackDat(input, end, start);
+                    }
+                    else
+                    {
+                        UnpackDat(input);
+                    }
+                    Console.WriteLine("Unpack {0} done...", Path.GetFileName(input));
+
+                }
+                if (mode == "-R")
+                {
+                    if (args.Length == 4)
+                    {
+                        int start = int.Parse(args[2]);
+                        int end = int.Parse(args[3]);
+                        RepackDat(input, end, start);
+                    }
+                    else
+                    {
+                        RepackDat(input);
+                    }
+
+                    Console.WriteLine("Repack {0} done...", Path.GetFileName(input));
+
+                }
+            }
+            
+            ////
+
         }
     }
 }
